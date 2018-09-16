@@ -1,5 +1,5 @@
 // Modules to control application life and create native browser window
-const ioHook = require("iohook");
+const ioHook = require("iohook-lib");
 const { app, BrowserWindow } = require("electron");
 const fs = require("fs");
 const menubar = require("menubar");
@@ -36,7 +36,6 @@ function createWindow() {
     mainWindow = null;
   });
 
-  ioHook.start(false);
   const homedir = require("os").homedir(),
     APP_DIRECTORY = homedir + "/.momentum",
     LOG_DIRECTORY = APP_DIRECTORY + "/logs";
@@ -45,17 +44,20 @@ function createWindow() {
 
   let startTime = new Date().getTime(),
     lastTime = startTime,
-    logFilePath = `${LOG_DIRECTORY}/${lastTime}.csv`;
+    logFilePath = `${LOG_DIRECTORY}/latest`;
 
   const logStream = fs.createWriteStream(logFilePath, { flags: "a" });
 
   logStream.write(`0,${lastTime}\n`);
+
+  ioHook.start(false);
 
   ioHook.on("keydown", function(event) {
     const t = new Date().getTime(),
       dT = t - lastTime;
     lastTime = t;
 
+    console.log(event.keycode);
     logStream.write(`${event.keycode},${dT}\n`);
   });
 }
