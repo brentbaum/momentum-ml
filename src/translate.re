@@ -27,7 +27,10 @@ let colemakCodes = [|
   44,
   51,
   52,
-  53
+  53,
+  57,
+  12,
+  13
 |];
 
 let rec find = (a, x, n) =>
@@ -44,10 +47,14 @@ let getCharacter = (code) =>
     string_of_int(code - 1)
   } else if (code === 14) {
     "<-"
+  } else if (code === 57) {
+    " "
+  } else if (code === 28) {
+    "->"
   } else {
     let index = find(colemakCodes, code, 0);
     if (index > (-1)) {
-      Js.String.get("abcdefghijklmnopqrstuvwxyz,./", index)
+      Js.String.get("abcdefghijklmnopqrstuvwxyz,./ -=", index)
     } else {
       string_of_int(code)
     }

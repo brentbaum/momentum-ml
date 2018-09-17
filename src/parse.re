@@ -5,12 +5,22 @@
    }); */
 [@bs.module "pyshell"] external run : unit => string = "run";
 
-let eventResolutionSeconds = 100.;
+let eventResolutionSeconds = 300.;
+
+let rangeHours = 6;
 
 type entry = {
   keyCode: int,
   timestamp: float
 };
+
+let arrayMaxF = Array.fold_left(max, min_float);
+
+let arrayMaxI = Array.fold_left(max, min_int);
+
+let arrayMinF = Array.fold_left(min, max_float);
+
+let arrayMinI = Array.fold_left(min, max_int);
 
 let deltas_to_timestamps =
   Array.fold_left(
@@ -51,15 +61,27 @@ let emptyBucket: bucket = {start: 0., keys: [||]};
 
 [@bs.val] external alert : string => unit = "alert";
 
-let bucket_entries = (entries) => {
+let formatTimestamp = (x) => {
+  let date = Js.Date.fromFloat(x);
+  let len = Js.String.length(Js.Date.toDateString(date));
+  let date_str = Js.String.substring(Js.Date.toDateString(date), ~from=0, ~to_=len - 5);
+  date_str ++ " " ++ string_of_int(int_of_float(Js.Date.getHours(date))) ++ ":00"
+};
+
+let bucketEntries = (entries) => {
   let timestamps = Array.map((s) => s.timestamp, entries);
   Js.Console.log(timestamps);
-  let minTimestamp = Array.fold_left(min, max_float, timestamps);
-  let maxTimestamp = Array.fold_left(max, min_float, timestamps);
-  let num_buckets =
-    int_of_float((maxTimestamp -. minTimestamp) /. eventResolutionSeconds /. 1000.);
+  let minTimestamp = arrayMinF(timestamps);
+  let maxTimestamp = arrayMaxF(timestamps);
   let get_timestamp_index = (timestamp) =>
     int_of_float((timestamp -. minTimestamp) /. eventResolutionSeconds /. 1000.);
+  let bucketCount = get_timestamp_index(maxTimestamp);
+  let step = (maxTimestamp -. minTimestamp) /. float_of_int(bucketCount);
+  let buckets =
+    Array.mapi(
+      (index, _bucket) => {start: minTimestamp +. step *. float_of_int(index), keys: [||]},
+      Array.make(bucketCount + 1, emptyBucket)
+    );
   let result =
     Array.fold_left(
       (distribution, entry) => {
@@ -72,13 +94,55 @@ let bucket_entries = (entries) => {
         };
         distribution
       },
-      Array.make(num_buckets + 1, emptyBucket),
+      buckets,
       entries
     );
   result
 };
 
-let processStats = (contents) => {
-  let parsedEntries = contents |> Js.String.split("\n") |> csv_to_entries |> deltas_to_timestamps;
-  bucket_entries(parsedEntries)
+let metas = [15, 42, 3675, 54, 56, 29, 3640, 3676];
+
+let filterEntries = (blacklist, entries) =>
+  Belt_Array.keep(entries, (e) => ! Belt_List.some(blacklist, (k) => k == e.keyCode));
+
+let get_ranges = (buckets) => {
+  let rangeSize = rangeHours * 60 * 60 / int_of_float(eventResolutionSeconds);
+  let indices = ref([||]);
+  let count = ref(Array.length(buckets));
+  while (count^ > 0) {
+    let next = arrayMaxI([|0, count^ - rangeSize|]);
+    indices := Array.append(indices^, [|(next, count^ - next)|]);
+    count := next
+  };
+  Js.log(indices^);
+  Array.fold_left(
+    (arr, (offset, len)) => Array.append(arr, [|Belt.Array.slice(buckets, ~offset, ~len)|]),
+    [||],
+    indices^
+  )
 };
+
+let processStats = (contents) => {
+  let entries =
+    contents
+    |> Js.String.split("\n")
+    |> csv_to_entries
+    |> deltas_to_timestamps
+    |> filterEntries(metas);
+  bucketEntries(entries)
+};
+
+let get_bucketized_chart =
+  Array.map(
+    (b) => {
+      let clicks = Belt_Array.keep(b.keys, (k) => k == (-1));
+      let clickCount = Array.length(clicks);
+      let typeCount = Array.length(b.keys);
+      {
+        "name": b.start,
+        "clicks": clickCount,
+        "types": typeCount,
+        "ratio": 100 * typeCount / (clickCount + typeCount + 1)
+      }
+    }
+  );
