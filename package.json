@@ -4,6 +4,7 @@
   "private": true,
   "main": "src/electron-starter.js",
   "dependencies": {
+    "@ahrefs/bs-recharts": "^0.2.1",
     "autoprefixer": "7.1.6",
     "babel-core": "6.26.0",
     "babel-eslint": "7.2.3",
@@ -42,6 +43,7 @@
     "react": "^16.5.1",
     "react-dev-utils": "^4.2.1",
     "react-dom": "^16.5.1",
+    "recharts": "^1.2.0",
     "style-loader": "0.19.0",
     "sw-precache-webpack-plugin": "0.11.4",
     "url-loader": "0.6.2",
