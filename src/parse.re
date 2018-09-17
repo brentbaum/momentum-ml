@@ -115,10 +115,20 @@ let get_ranges = (buckets) => {
     count := next
   };
   Js.log(indices^);
-  Array.fold_left(
-    (arr, (offset, len)) => Array.append(arr, [|Belt.Array.slice(buckets, ~offset, ~len)|]),
-    [||],
+  let ranges =
     indices^
+    |> Array.fold_left(
+         (arr, (offset, len)) =>
+           Array.append(
+             arr,
+             [|Belt.Array.reverse(Belt.Array.slice(Belt.Array.reverse(buckets), ~offset, ~len))|]
+           ),
+         [||]
+       )
+    |> Belt.Array.reverse;
+  Belt.Array.keep(
+    ranges,
+    (range) => Belt.Array.some(range, (bucket) => Array.length(bucket.keys) > 0)
   )
 };
 
@@ -142,7 +152,7 @@ let get_bucketized_chart =
         "name": b.start,
         "clicks": clickCount,
         "types": typeCount,
-        "ratio": 100 * typeCount / (clickCount + typeCount + 1)
+        "ratio": 100 * typeCount / (clickCount + typeCount + 10)
       }
     }
   );
