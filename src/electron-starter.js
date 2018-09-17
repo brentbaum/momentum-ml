@@ -52,14 +52,20 @@ function createWindow() {
 
   ioHook.start(false);
 
-  ioHook.on("keydown", function(event) {
+  const addEvent = event => {
     const t = new Date().getTime(),
       dT = t - lastTime;
     lastTime = t;
 
     console.log(event.keycode);
     logStream.write(`${event.keycode},${dT}\n`);
-  });
+  };
+
+  ioHook.on("keydown", addEvent);
+  ioHook.on("mouseclick", event => addEvent({ keycode: -1 }));
+  // ioHook.on("mousewheel", event => {
+  //   console.log(event);
+  // });
 }
 
 // This method will be called when Electron has finished
